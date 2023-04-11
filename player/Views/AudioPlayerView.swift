@@ -3,20 +3,28 @@ import SwiftUI
 import AVFoundation
 import UniformTypeIdentifiers
 import UIKit
+class URLStore: ObservableObject {
+    @Published var urls: [URL] = []
+    func add(url: URL) {
+        urls.append(url)
+    }
+}
 
 struct AudioPlayerView: View {
+    @StateObject var store = URLStore()
     @Environment(\.presentationMode) var presentationMode
     @Binding var currentTime: TimeInterval
     @ObservedObject var audioPlayer = AudioPlayer()
     @State private var isPlaying = false
     @State private var totalTime: TimeInterval = 0
-
+   
     @StateObject var fileImporter = FileImporter(
-        allowedContentTypes: [UTType.audio],
-        completion: { url in
-            // Do something with the selected URL, such as playing the audio file.
-        }
-    )
+            allowedContentTypes: [UTType.audio],
+            completion: { [weak store] url in
+                guard let store = store else { return }
+                store.add(url: url)
+            }
+        )
 
     var body: some View {
         VStack {
@@ -57,51 +65,34 @@ struct AudioPlayerView: View {
             }) {
                 Text("Import Audio File")
             }
+
+            // Display the list of URLs
+            URLListView(store: store)
         }
         .sheet(isPresented: self.$fileImporter.isPresented) {
             DocumentPickerView(fileImporter: self.fileImporter)
                 .edgesIgnoringSafeArea(.all)
         }
-    }
-}
-
-struct DocumentPickerView: UIViewControllerRepresentable {
-    let fileImporter: FileImporter
-
-    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: fileImporter.allowedContentTypes)
-        picker.delegate = context.coordinator as? UIDocumentPickerDelegate
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {
-        uiViewController.allowsMultipleSelection = false
-        uiViewController.shouldShowFileExtensions = true
-
-        if #available(iOS 14.0, *) {
-            uiViewController.allowsMultipleSelection = false
-        }
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(fileImporter: fileImporter)
-    }
-
-    class Coordinator: NSObject, UIDocumentPickerDelegate {
-        let fileImporter: FileImporter
-
-        init(fileImporter: FileImporter) {
-            self.fileImporter = fileImporter
-        }
-
-        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-            guard let url = urls.first else { return }
-            fileImporter.selectedFileURL = url
-        }
-
-        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-            fileImporter.selectedFileURL = nil
-            fileImporter.isPresented = false
+        .onAppear {
+            // Print the current list of URLs
+            // print(URLStore.urls)
         }
     }
 }
+
+struct URLListView: View {
+    @ObservedObject var store: URLStore
+    var body: some View {
+        List {
+            ForEach(store.urls, id: \.self) { url in
+                Text("\(url.lastPathComponent)")
+            }
+        }
+    }
+}
+
+
+
+
+
+
