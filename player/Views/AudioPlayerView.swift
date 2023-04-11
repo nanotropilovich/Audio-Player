@@ -5,23 +5,33 @@ import UniformTypeIdentifiers
 import UIKit
 import Combine
 class URLStore: ObservableObject {
-    @Published var urls: [URL] {
+    @Published var urls: [AudioFile] {
         didSet {
-            UserDefaults.standard.set(try? PropertyListEncoder().encode(urls), forKey: "urls")
+            let data = try? JSONEncoder().encode(urls)
+            UserDefaults.standard.set(data, forKey: "audioFiles")
         }
     }
 
     init() {
-        urls = UserDefaults.standard.value(forKey: "urls") as? [URL] ?? []
+        if let data = UserDefaults.standard.data(forKey: "audioFiles"),
+           let audioFiles = try? JSONDecoder().decode([AudioFile].self, from: data) {
+            urls = audioFiles
+        } else {
+            urls = []
+        }
     }
 
     func add(url: URL) {
-        urls.append(url)
+        let audioFile = AudioFile(url: url)
+        urls.append(audioFile)
     }
+
     func removeAll() {
-           urls.removeAll()
-       }
+        urls.removeAll()
+    }
 }
+
+typealias AudioURL = AudioFile
 
 struct AudioPlayerView: View {
     @StateObject var store = URLStore()
@@ -37,13 +47,11 @@ struct AudioPlayerView: View {
         )
     var body: some View {
         VStack {
-          
-          
             Button(action: {
-                           store.removeAll()
-                       }) {
-                           Text("Clear URLs")
-                       }
+                store.removeAll()
+            }) {
+                Text("Clear URLs")
+            }
             Button(action: {
                 if let rootVC = UIApplication.shared.windows.first?.rootViewController {
                     fileImporter.present(from: rootVC)
@@ -51,7 +59,6 @@ struct AudioPlayerView: View {
             }) {
                 Text("Import Audio File")
             }
-           
             URLListView(store: store, currentTime: $currentTime)
         }
         .sheet(isPresented: self.$fileImporter.isPresented) {
@@ -59,62 +66,69 @@ struct AudioPlayerView: View {
                 .edgesIgnoringSafeArea(.all)
         }
         .onAppear {
-                    if let data = UserDefaults.standard.value(forKey: "urls") as? Data {
-                        if let urls = try? PropertyListDecoder().decode([URL].self, from: data) {
-                            store.urls = urls
-                        }
-                    }
+            if let data = UserDefaults.standard.value(forKey: "urls") as? Data {
+                if let urls = try? PropertyListDecoder().decode([AudioURL].self, from: data) {
+                    store.urls = urls
                 }
-                .onChange(of: self.fileImporter.selectedFileURL) { selectedFileURL in
-                    if let url = selectedFileURL {
-                        store.add(url: url)
-                    }
-                }
+            }
+        }
+        .onChange(of: self.fileImporter.selectedFileURL) { selectedFileURL in
+            if let url = selectedFileURL {
+                store.add(url: url)
+            }
+        }
     }
 }
 
 
 struct URLListView: View {
-    @ObservedObject var store: URLStore
+    @ObservedObject var store: URLStore // обновляем до ObservedObject
     @Binding var currentTime: TimeInterval
     @State private var currentURLIndex: Int = 0
+    
+    init(store: URLStore, currentTime: Binding<TimeInterval>) { // добавляем инициализатор
+        self.store = store
+        self._currentTime = currentTime
+    }
     
     var body: some View {
         NavigationView {
             List {
                 ForEach(store.urls, id: \.self) { url in
-                    NavigationLink(destination: URLDetailView(urls: store.urls, currentURLIndex: $currentURLIndex, currentTime: $currentTime)) {
-                        Text("\(url.lastPathComponent)")
+                    NavigationLink(destination: URLDetailView(urls: store.urls, currentURLIndex: $currentURLIndex)) {
+                        Text("\(url.url.lastPathComponent)")
                     }
                 }
-                    .onDelete(perform: delete)
-                    }
-                    .navigationTitle("Track List")
-                    .navigationBarItems(trailing: EditButton())
-                    }
-                    }
+                .onDelete(perform: delete)
+            }
+            .navigationTitle("Track List")
+            .navigationBarItems(trailing: EditButton())
+        }
+    }
+    
     func delete(at offsets: IndexSet) {
         store.urls.remove(atOffsets: offsets)
     }
-    }
+}
+
 
 
 struct URLDetailView: View {
-    let urls: [URL]
+    let urls: [AudioFile]
     @Binding var currentURLIndex: Int
     @State private var totalTime: TimeInterval = 0
     @State private var isPlaying = false
     @ObservedObject var audioPlayer = AudioPlayer()
-    @Binding var currentTime: TimeInterval
+    //@Binding var currentTime: TimeInterval
     
     var body: some View {
         let url = urls[currentURLIndex]
         
-        Slider(value: Binding(get: { self.currentTime }, set: { self.audioPlayer.seek(to: $0) }), in: 0...self.totalTime) {
+        Slider(value: Binding(get: { url.currentTime }, set: { self.audioPlayer.seek(to: $0) }), in: 0...self.totalTime) {
             Text("")
         }
         .onReceive(self.audioPlayer.$currentTime) { currentTime in
-            self.currentTime = currentTime ?? 0
+            url.currentTime = currentTime ?? 0
         }
         .onReceive(self.audioPlayer.$duration) { duration in
             self.totalTime = duration ?? 0
@@ -124,9 +138,9 @@ struct URLDetailView: View {
         Button(action: {
             withAnimation {
                 if self.audioPlayer.isPlaying {
-                    self.audioPlayer.stopPlaying(at: self.currentTime)
+                    self.audioPlayer.stopPlaying(at: url.currentTime)
                 } else {
-                    self.audioPlayer.playAudio(from: url, startTime: self.currentTime)
+                    self.audioPlayer.playAudio(from: url.url, startTime: url.currentTime)
                 }
                 self.isPlaying.toggle()
             }
@@ -162,7 +176,7 @@ struct URLDetailView: View {
             .disabled(currentURLIndex == urls.count - 1)
         }
         
-        Text("Selected URL: \(url.absoluteString)")
+        Text("Selected URL: \(url.url.absoluteString)")
     }
 }
 

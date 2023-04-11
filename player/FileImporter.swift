@@ -34,7 +34,7 @@ class FileImporter: NSObject, ObservableObject, UIDocumentPickerDelegate {
         }
 
         selectedFileURL = url
-        urlStore.urls.append(url)
+        urlStore.add(url: url)
         completion(url) // добавляем эту строчку для вызова переданного замыкания при выборе файла
         isPresented = false
     }

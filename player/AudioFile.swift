@@ -10,15 +10,54 @@ import AVFoundation
 import CoreMedia
 
 
-struct AudioFile: Identifiable, Equatable, Codable {
+import Foundation
+import AVFoundation
+import CoreMedia
+import Combine
+
+class AudioFile: ObservableObject, Identifiable, Equatable, Codable, Hashable {
+    static func == (lhs: AudioFile, rhs: AudioFile) -> Bool {
+        lhs.id == rhs.id
+    }
+    required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        url = try container.decode(URL.self, forKey: .url)
+        name = try container.decode(String.self, forKey: .name)
+        artist = try container.decodeIfPresent(String.self, forKey: .artist)
+        album = try container.decodeIfPresent(String.self, forKey: .album)
+        duration = try container.decodeIfPresent(TimeInterval.self, forKey: .duration)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(url, forKey: .url)
+        try container.encode(name, forKey: .name)
+        try container.encode(artist, forKey: .artist)
+        try container.encode(album, forKey: .album)
+        try container.encode(duration, forKey: .duration)
+    }
+    enum CodingKeys: String, CodingKey {
+        case id
+        case url
+        case name
+        case artist
+        case album
+        case duration
+        case isPlaying
+        case currentTime
+    }
+
     let id = UUID()
     let url: URL
     let name: String
-    var artist: String?
-    var album: String?
+    @Published var artist: String?
+    @Published var album: String?
     let duration: TimeInterval?
-    var isPlaying = false
-    
+    @Published var isPlaying = false
+    @Published var currentTime: TimeInterval = 0
+
+    private var cancellables = Set<AnyCancellable>()
+
     init(url: URL) {
         self.url = url
         self.name = url.lastPathComponent
@@ -26,7 +65,7 @@ struct AudioFile: Identifiable, Equatable, Codable {
         self.album = nil
         self.duration = nil
     }
-    
+
     init(url: URL, metadata: [AVMetadataItem]) async {
         self.url = url
         self.name = url.lastPathComponent
@@ -45,7 +84,7 @@ struct AudioFile: Identifiable, Equatable, Codable {
 
         self.duration = AVAsset(url: url).duration.seconds
     }
-    
+
     func formattedDuration() -> String {
         guard let duration = self.duration else {
             return ""
@@ -56,7 +95,56 @@ struct AudioFile: Identifiable, Equatable, Codable {
         formatter.zeroFormattingBehavior = .pad
         return formatter.string(from: duration) ?? ""
     }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    func togglePlaying() {
+        isPlaying.toggle()
+    }
+
+    func setCurrentTime(_ time: TimeInterval) {
+        currentTime = time
+    }
+
+    func updateMetadata() async {
+        guard let asset = try? AVAsset(url: url) else { return }
+
+        let metadata = asset.metadata
+        let artistItem = metadata.first(where: { $0.commonKey == AVMetadataKey.commonKeyArtist })
+        if let artistItem = artistItem {
+            try? await artistItem.loadValuesAsynchronously(forKeys: [AVMetadataKey.commonKeyTitle.rawValue])
+            artist = artistItem.stringValue
+        }
+
+        let albumItem = metadata.first(where: { $0.commonKey == AVMetadataKey.commonKeyAlbumName })
+        if let albumItem = albumItem {
+            try? await albumItem.loadValuesAsynchronously(forKeys: [AVMetadataKey.commonKeyTitle.rawValue])
+            album = albumItem.stringValue
+        }
+    }
+
+    func bind(to player: AVPlayer) {
+        player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 1, preferredTimescale: 1), queue: nil) { [weak self] time in
+            guard let self = self else { return }
+            self.currentTime = time.seconds
+        }
+    }
+    
+    func play() {
+        isPlaying = true
+    }
+    
+    func pause() {
+        isPlaying = false
+    }
 }
+
+
+
+
+
 
 
 
