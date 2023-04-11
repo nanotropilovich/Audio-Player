@@ -76,7 +76,7 @@ struct AudioPlayerView: View {
                 Text("Import Audio File")
             }
            
-            URLListView(store: store)
+            URLListView(store: store, currentTime: $currentTime)
         }
         .sheet(isPresented: self.$fileImporter.isPresented) {
             DocumentPickerView(fileImporter: self.fileImporter)
@@ -100,12 +100,12 @@ struct AudioPlayerView: View {
 
 struct URLListView: View {
     @ObservedObject var store: URLStore
-    
+    @Binding var currentTime: TimeInterval
     var body: some View {
         NavigationView {
             List {
                 ForEach(store.urls, id: \.self) { url in
-                    NavigationLink(destination: URLDetailView(url: url)) {
+                    NavigationLink(destination: URLDetailView(url: url, currentTime: $currentTime)) {
                         Text("\(url.lastPathComponent)")
                     }
                 }
@@ -124,13 +124,33 @@ struct URLListView: View {
 
 struct URLDetailView: View {
     let url: URL
-    
+    @State private var totalTime: TimeInterval = 0
+    @State private var isPlaying = false
+    @ObservedObject var audioPlayer = AudioPlayer()
+    @Binding var currentTime: TimeInterval
     var body: some View {
         // Используем url в этом View
+        Button(action: {
+            withAnimation {
+                if self.audioPlayer.isPlaying {
+                    self.audioPlayer.stopPlaying(at: self.currentTime)
+                } else {
+                    
+                        self.audioPlayer.playAudio(from: url, startTime: self.currentTime)
+                    
+                }
+                self.isPlaying.toggle()
+            }
+        }) {
+            Image(systemName: self.isPlaying ? "stop.circle" : "play.circle")
+                .resizable()
+                .frame(width: 50, height: 50)
+        }
         Text("Selected URL: \(url.absoluteString)")
         
     }
 }
+
 
 
 
