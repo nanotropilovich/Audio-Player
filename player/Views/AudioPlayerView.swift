@@ -96,7 +96,12 @@ struct URLListView: View {
             List {
                 ForEach(store.urls, id: \.self) { url in
                     NavigationLink(destination: URLDetailView(urls: store.urls, currentURLIndex: $currentURLIndex)) {
-                        Text("\(url.url.lastPathComponent)")
+                        Text("\(url.artist ?? "no name") - \(url.name ?? "no name")")
+
+                       
+
+                       
+                        
                     }
                 }
                 .onDelete(perform: delete)
@@ -120,16 +125,23 @@ struct URLDetailView: View {
     @State private var isPlaying = false
     @ObservedObject var audioPlayer = AudioPlayer()
     //@Binding var currentTime: TimeInterval
-    
+    func formattedTime(_ time: TimeInterval) -> String {
+            let minutes = Int(time / 60)
+            let seconds = Int(time.truncatingRemainder(dividingBy: 60))
+            return String(format: "%02d:%02d", minutes, seconds)
+        }
     var body: some View {
         let url = urls[currentURLIndex]
-        
+        let asset = AVURLAsset(url: url.url)
         Slider(value: Binding(get: { url.currentTime }, set: { self.audioPlayer.seek(to: $0) }), in: 0...self.totalTime) {
-            Text("")
-        }
-        .onReceive(self.audioPlayer.$currentTime) { currentTime in
-            url.currentTime = currentTime ?? 0
-        }
+            Text("\(formattedTime(url.currentTime)) / \(formattedTime(self.totalTime))")
+            
+                }
+        
+                .onReceive(self.audioPlayer.$currentTime) { currentTime in
+                   
+                    url.currentTime = currentTime ?? 0
+                }
         .onReceive(self.audioPlayer.$duration) { duration in
             self.totalTime = duration ?? 0
         }
@@ -176,7 +188,14 @@ struct URLDetailView: View {
             .disabled(currentURLIndex == urls.count - 1)
         }
         
-        Text("Selected URL: \(url.url.absoluteString)")
+        Text("Album: \(url.album ?? "no album name")")
+        Text("Duration: \(url.duration?.description ?? "unknown")")
+       let minutes = Int((url.duration ?? 0) / 60)
+    let seconds = Int(url.duration?.truncatingRemainder(dividingBy: 60) ?? 0)
+       Text(String(format: "%02d:%02d", minutes, seconds))
+
+
+
     }
 }
 
