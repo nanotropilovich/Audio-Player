@@ -3,13 +3,13 @@ import SwiftUI
 import AVFoundation
 import UniformTypeIdentifiers
 import UIKit
+import Combine
 class URLStore: ObservableObject {
     @Published var urls: [URL] = []
     func add(url: URL) {
         urls.append(url)
     }
 }
-
 struct AudioPlayerView: View {
     @StateObject var store = URLStore()
     @Environment(\.presentationMode) var presentationMode
@@ -17,15 +17,11 @@ struct AudioPlayerView: View {
     @ObservedObject var audioPlayer = AudioPlayer()
     @State private var isPlaying = false
     @State private var totalTime: TimeInterval = 0
-   
     @StateObject var fileImporter = FileImporter(
             allowedContentTypes: [UTType.audio],
-            completion: { [weak store] url in
-                guard let store = store else { return }
-                store.add(url: url)
+            completion: {_ in
             }
         )
-
     var body: some View {
         VStack {
             Button(action: {
@@ -44,12 +40,9 @@ struct AudioPlayerView: View {
                     .resizable()
                     .frame(width: 50, height: 50)
             }
-
-
             Slider(value: Binding(get: { self.currentTime }, set: { self.audioPlayer.seek(to: $0) }), in: 0...self.totalTime) {
                 Text("")
             }
-
             .onReceive(self.audioPlayer.$currentTime) { currentTime in
                 self.currentTime = currentTime ?? 0
             }
@@ -65,8 +58,7 @@ struct AudioPlayerView: View {
             }) {
                 Text("Import Audio File")
             }
-
-            // Display the list of URLs
+           
             URLListView(store: store)
         }
         .sheet(isPresented: self.$fileImporter.isPresented) {
@@ -77,8 +69,14 @@ struct AudioPlayerView: View {
             // Print the current list of URLs
             // print(URLStore.urls)
         }
+        .onChange(of: self.fileImporter.selectedFileURL) { selectedFileURL in
+            if let url = selectedFileURL {
+                store.add(url: url)
+            }
+        }
     }
 }
+
 
 struct URLListView: View {
     @ObservedObject var store: URLStore
