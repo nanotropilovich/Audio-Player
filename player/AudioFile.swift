@@ -5,10 +5,6 @@
 //  Created by Ilya on 09.04.2023.
 //
 
-import Foundation
-import AVFoundation
-import CoreMedia
-
 
 import Foundation
 import AVFoundation
@@ -108,22 +104,7 @@ class AudioFile: ObservableObject, Identifiable, Equatable, Codable, Hashable {
         currentTime = time
     }
 
-    func updateMetadata() async {
-        guard let asset = try? AVAsset(url: url) else { return }
-
-        let metadata = asset.metadata
-        let artistItem = metadata.first(where: { $0.commonKey == AVMetadataKey.commonKeyArtist })
-        if let artistItem = artistItem {
-            try? await artistItem.loadValuesAsynchronously(forKeys: [AVMetadataKey.commonKeyTitle.rawValue])
-            artist = artistItem.stringValue
-        }
-
-        let albumItem = metadata.first(where: { $0.commonKey == AVMetadataKey.commonKeyAlbumName })
-        if let albumItem = albumItem {
-            try? await albumItem.loadValuesAsynchronously(forKeys: [AVMetadataKey.commonKeyTitle.rawValue])
-            album = albumItem.stringValue
-        }
-    }
+  
 
     func bind(to player: AVPlayer) {
         player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 1, preferredTimescale: 1), queue: nil) { [weak self] time in
@@ -140,15 +121,6 @@ class AudioFile: ObservableObject, Identifiable, Equatable, Codable, Hashable {
         isPlaying = false
     }
 }
-
-
-
-
-
-
-
-
-
 class AudioFileManager {
     private static let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
     private static let audioFilesURL = documentsDirectory.appendingPathComponent("audioFiles").appendingPathExtension("json")
@@ -160,15 +132,24 @@ class AudioFileManager {
         }
         return audioFiles
     }
-    
+    static func numberOfFiles() -> Int {
+            let audioFiles = loadAudioFiles()
+            return audioFiles.count
+        }
     static func saveAudioFiles(_ audioFiles: [AudioFile]) {
         let data = try? JSONEncoder().encode(audioFiles)
         try? data?.write(to: audioFilesURL)
+    }
+    static func deleteAllAudioFiles() {
+        var audioFiles = loadAudioFiles()
+        audioFiles.removeAll()
+        saveAudioFiles(audioFiles)
     }
     
     static func deleteAudioFile(_ audioFile: AudioFile) {
         var audioFiles = loadAudioFiles()
         guard let index = audioFiles.firstIndex(of: audioFile) else {
+            
             return
         }
         audioFiles.remove(at: index)

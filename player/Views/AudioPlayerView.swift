@@ -5,36 +5,34 @@ import UniformTypeIdentifiers
 import UIKit
 import Combine
 class URLStore: ObservableObject {
-    @Published var urls: [AudioFile] {
-        didSet {
-            let data = try? JSONEncoder().encode(urls)
-            UserDefaults.standard.set(data, forKey: "audioFiles")
-        }
-    }
+    @Published var urls: [AudioFile]
 
-    init() {
-        if let data = UserDefaults.standard.data(forKey: "audioFiles"),
-           let audioFiles = try? JSONDecoder().decode([AudioFile].self, from: data) {
-            urls = audioFiles
-        } else {
-            urls = []
-        }
+    init(urls: [AudioFile]) {
+        self.urls = urls
+        //let data = try? JSONEncoder().encode(urls)
+        //UserDefaults.standard.set(data, forKey: "audioFiles")
     }
 
     func add(url: URL) {
-        let audioFile = AudioFile(url: url)
-        urls.append(audioFile)
+       // let audioFile = AudioFile(url: url)
+           // urls.append(audioFile)
+        AudioFileManager.addAudioFile(AudioFile(url: url))
     }
 
     func removeAll() {
-        urls.removeAll()
+        //urls.removeAll()
+        AudioFileManager.deleteAllAudioFiles()
     }
+
+    
 }
 
 typealias AudioURL = AudioFile
 
 struct AudioPlayerView: View {
-    @StateObject var store = URLStore()
+    @StateObject var store = URLStore(urls: AudioFileManager.loadAudioFiles())
+    @State private var numberOfFiles = AudioFileManager.numberOfFiles()
+
     @Environment(\.presentationMode) var presentationMode
     @Binding var currentTime: TimeInterval
     @ObservedObject var audioPlayer = AudioPlayer()
@@ -52,6 +50,7 @@ struct AudioPlayerView: View {
             }) {
                 Text("Clear URLs")
             }
+            
             Button(action: {
                 if let rootVC = UIApplication.shared.windows.first?.rootViewController {
                     fileImporter.present(from: rootVC)
@@ -66,29 +65,42 @@ struct AudioPlayerView: View {
                 .edgesIgnoringSafeArea(.all)
         }
         .onAppear {
-            if let data = UserDefaults.standard.value(forKey: "urls") as? Data {
-                if let urls = try? PropertyListDecoder().decode([AudioURL].self, from: data) {
-                    store.urls = urls
+           
+               
+            if numberOfFiles != AudioFileManager.numberOfFiles() {
+                    store.urls = AudioFileManager.loadAudioFiles()
+                    numberOfFiles = AudioFileManager.numberOfFiles()
                 }
-            }
+                
+            
         }
+        /*
         .onChange(of: self.fileImporter.selectedFileURL) { selectedFileURL in
             if let url = selectedFileURL {
                 store.add(url: url)
             }
+         }
+            */
+        .onChange(of: self.fileImporter.selectedFileURL) { selectedFileURL in
+            if let url = selectedFileURL {
+                let audioFile = AudioFile(url: url)
+                AudioFileManager.addAudioFile(audioFile)
+                //store.add(url: url)
+            }
+        
         }
     }
 }
 
-
 struct URLListView: View {
-    @ObservedObject var store: URLStore // обновляем до ObservedObject
+    //@ObservedObject var store = URLStore(urls: AudioFileManager.loadAudioFiles()) // обновляем до ObservedObject
     @Binding var currentTime: TimeInterval
     @State private var currentURLIndex: Int = 0
-    
+    @ObservedObject var store: URLStore
     init(store: URLStore, currentTime: Binding<TimeInterval>) { // добавляем инициализатор
         self.store = store
         self._currentTime = currentTime
+        
     }
     
     var body: some View {
@@ -97,14 +109,14 @@ struct URLListView: View {
                 ForEach(store.urls, id: \.self) { url in
                     NavigationLink(destination: URLDetailView(urls: store.urls, currentURLIndex: $currentURLIndex)) {
                         Text("\(url.artist ?? "no name") - \(url.name)")
-
-                       
-                        
-                       
-                        
                     }
                 }
                 .onDelete(perform: delete)
+            }
+            .onAppear {
+             
+                        store.urls = AudioFileManager.loadAudioFiles()
+                
             }
             .navigationTitle("Track List")
             .navigationBarItems(trailing: EditButton())
@@ -115,8 +127,6 @@ struct URLListView: View {
         store.urls.remove(atOffsets: offsets)
     }
 }
-
-
 
 struct URLDetailView: View {
     let urls: [AudioFile]
@@ -197,6 +207,7 @@ struct URLDetailView: View {
         }
         .frame(width: 300, height: 200) // здесь можно установить нужный размер для VStack
 
+        Text("Album: \(url.album ?? "no album name")")
         Text("Album: \(url.album ?? "no album name")")
         Text("Duration: \(url.duration?.description ?? "unknown")")
        let minutes = Int((url.duration ?? 0) / 60)

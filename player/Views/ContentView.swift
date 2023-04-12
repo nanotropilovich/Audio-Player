@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-
 struct ContentView: View {
     @State private var currentTime: TimeInterval = 0
 
@@ -14,9 +13,6 @@ struct ContentView: View {
         AudioPlayerView(currentTime: self.$currentTime)
     }
 }
-
-
-
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
