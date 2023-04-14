@@ -1,14 +1,18 @@
 import AVFoundation
 import SwiftUI
 import Combine
+
 class AudioPlayer: NSObject, ObservableObject {
     private var player: AVAudioPlayer?
     private var timer: Timer?
     private var isSeeking = false
+
     @Published var isPlaying = false
     @Published var duration: TimeInterval?
     private var atTime: TimeInterval = 0
     @Published var currentTime: TimeInterval?
+
+    
     func playAudio(from url: URL, startTime: TimeInterval = 0) {
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback)
@@ -31,6 +35,7 @@ class AudioPlayer: NSObject, ObservableObject {
             print("Error playing audio: \(error.localizedDescription)")
         }
     }
+
 
     func stopPlaying(at time: TimeInterval? = nil) {
         if let time = time {

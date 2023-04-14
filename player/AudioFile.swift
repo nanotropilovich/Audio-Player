@@ -5,6 +5,10 @@
 //  Created by Ilya on 09.04.2023.
 //
 
+import Foundation
+import AVFoundation
+import CoreMedia
+
 
 import Foundation
 import AVFoundation
@@ -16,13 +20,16 @@ class AudioFile: ObservableObject, Identifiable, Equatable, Codable, Hashable {
         lhs.id == rhs.id
     }
     required init(from decoder: Decoder) throws {
+        
         let container = try decoder.container(keyedBy: CodingKeys.self)
         url = try container.decode(URL.self, forKey: .url)
         name = try container.decode(String.self, forKey: .name)
         artist = try container.decodeIfPresent(String.self, forKey: .artist)
         album = try container.decodeIfPresent(String.self, forKey: .album)
         duration = try container.decodeIfPresent(TimeInterval.self, forKey: .duration)
+        folderID = try container.decodeIfPresent(UUID.self, forKey: .folderID)
     }
+    
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
@@ -31,17 +38,19 @@ class AudioFile: ObservableObject, Identifiable, Equatable, Codable, Hashable {
         try container.encode(artist, forKey: .artist)
         try container.encode(album, forKey: .album)
         try container.encode(duration, forKey: .duration)
+        try container.encodeIfPresent(folderID, forKey: .folderID)
     }
     enum CodingKeys: String, CodingKey {
-        case id
-        case url
-        case name
-        case artist
-        case album
-        case duration
-        case isPlaying
-        case currentTime
-    }
+            case id
+            case url
+            case name
+            case artist
+            case album
+            case duration
+            case isPlaying
+            case currentTime
+            case folderID
+        }
 
     let id = UUID()
     let url: URL
@@ -51,7 +60,7 @@ class AudioFile: ObservableObject, Identifiable, Equatable, Codable, Hashable {
     let duration: TimeInterval?
     @Published var isPlaying = false
     @Published var currentTime: TimeInterval = 0
-
+    var folderID: UUID?
     private var cancellables = Set<AnyCancellable>()
 
     init(url: URL) {
@@ -61,7 +70,19 @@ class AudioFile: ObservableObject, Identifiable, Equatable, Codable, Hashable {
         self.album = nil
         self.duration = nil
     }
-
+    init(url: URL, folderID: UUID? = nil) {
+        self.url = url
+               self.name = url.lastPathComponent
+               self.folderID = folderID
+       
+        self.artist = nil
+        self.album = nil
+        self.duration = nil
+        self.folderID = folderID
+    }
+    func moveToFolder(_ folder: Folder) {
+            folderID = folder.id
+        }
     init(url: URL, metadata: [AVMetadataItem]) async {
         self.url = url
         self.name = url.lastPathComponent
@@ -104,7 +125,22 @@ class AudioFile: ObservableObject, Identifiable, Equatable, Codable, Hashable {
         currentTime = time
     }
 
-  
+    func updateMetadata() async {
+        guard let asset = try? AVAsset(url: url) else { return }
+
+        let metadata = asset.metadata
+        let artistItem = metadata.first(where: { $0.commonKey == AVMetadataKey.commonKeyArtist })
+        if let artistItem = artistItem {
+            try? await artistItem.loadValuesAsynchronously(forKeys: [AVMetadataKey.commonKeyTitle.rawValue])
+            artist = artistItem.stringValue
+        }
+
+        let albumItem = metadata.first(where: { $0.commonKey == AVMetadataKey.commonKeyAlbumName })
+        if let albumItem = albumItem {
+            try? await albumItem.loadValuesAsynchronously(forKeys: [AVMetadataKey.commonKeyTitle.rawValue])
+            album = albumItem.stringValue
+        }
+    }
 
     func bind(to player: AVPlayer) {
         player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 1, preferredTimescale: 1), queue: nil) { [weak self] time in
@@ -121,6 +157,15 @@ class AudioFile: ObservableObject, Identifiable, Equatable, Codable, Hashable {
         isPlaying = false
     }
 }
+
+
+
+
+
+
+
+
+
 class AudioFileManager {
     private static let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
     private static let audioFilesURL = documentsDirectory.appendingPathComponent("audioFiles").appendingPathExtension("json")
@@ -132,24 +177,15 @@ class AudioFileManager {
         }
         return audioFiles
     }
-    static func numberOfFiles() -> Int {
-            let audioFiles = loadAudioFiles()
-            return audioFiles.count
-        }
+    
     static func saveAudioFiles(_ audioFiles: [AudioFile]) {
         let data = try? JSONEncoder().encode(audioFiles)
         try? data?.write(to: audioFilesURL)
-    }
-    static func deleteAllAudioFiles() {
-        var audioFiles = loadAudioFiles()
-        audioFiles.removeAll()
-        saveAudioFiles(audioFiles)
     }
     
     static func deleteAudioFile(_ audioFile: AudioFile) {
         var audioFiles = loadAudioFiles()
         guard let index = audioFiles.firstIndex(of: audioFile) else {
-            
             return
         }
         audioFiles.remove(at: index)

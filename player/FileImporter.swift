@@ -1,13 +1,16 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import MobileCoreServices
+
 class FileImporter: NSObject, ObservableObject, UIDocumentPickerDelegate {
     let allowedContentTypes: [UTType]
     let presentingViewController: UIViewController?
     let completion: (URL) -> Void
+
     @Published var isPresented = false
     @Published var selectedFileURL: URL?
-        //var urlStore = URLStore()
+
+    var urlStore = URLStore()
 
     init(allowedContentTypes: [UTType], presentingViewController: UIViewController? = nil, completion: @escaping (URL) -> Void) {
         self.allowedContentTypes = allowedContentTypes
@@ -31,7 +34,7 @@ class FileImporter: NSObject, ObservableObject, UIDocumentPickerDelegate {
         }
 
         selectedFileURL = url
-        //urlStore.add(url: url)
+        urlStore.add(url: url)
         completion(url) // добавляем эту строчку для вызова переданного замыкания при выборе файла
         isPresented = false
     }

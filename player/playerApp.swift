@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+
 @main
 struct playerApp: App {
     var body: some Scene {

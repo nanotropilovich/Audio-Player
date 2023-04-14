@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		093CE09729E780C7008B98E0 /* Folder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093CE09629E780C7008B98E0 /* Folder.swift */; };
+		093CE09B29E78736008B98E0 /* CreateFolderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093CE09A29E78736008B98E0 /* CreateFolderView.swift */; };
+		093CE09D29E823BD008B98E0 /* AddFolderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093CE09C29E823BD008B98E0 /* AddFolderView.swift */; };
 		094D338D29E2FA990035A05C /* playerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 094D338C29E2FA990035A05C /* playerApp.swift */; };
 		094D338F29E2FA990035A05C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 094D338E29E2FA990035A05C /* ContentView.swift */; };
 		094D339129E2FA9A0035A05C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 094D339029E2FA9A0035A05C /* Assets.xcassets */; };
@@ -21,6 +24,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		093CE09629E780C7008B98E0 /* Folder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Folder.swift; sourceTree = "<group>"; };
+		093CE09A29E78736008B98E0 /* CreateFolderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFolderView.swift; sourceTree = "<group>"; };
+		093CE09C29E823BD008B98E0 /* AddFolderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFolderView.swift; sourceTree = "<group>"; };
 		094D338929E2FA990035A05C /* player.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = player.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		094D338C29E2FA990035A05C /* playerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = playerApp.swift; sourceTree = "<group>"; };
 		094D338E29E2FA990035A05C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -70,6 +76,7 @@
 				094D338C29E2FA990035A05C /* playerApp.swift */,
 				0953DFC729E4C6A00097A006 /* Views */,
 				0953DF9B29E33D9A0097A006 /* FileImporter.swift */,
+				093CE09629E780C7008B98E0 /* Folder.swift */,
 				0953DF9D29E33DB70097A006 /* AudioPlayer.swift */,
 				094D339E29E2FC430035A05C /* AudioFile.swift */,
 				0953DFA529E3449F0097A006 /* Coordinator.swift */,
@@ -101,6 +108,8 @@
 				094D338E29E2FA990035A05C /* ContentView.swift */,
 				0953DFC529E4C69A0097A006 /* DocumentPickerView.swift */,
 				094D339A29E2FADC0035A05C /* AudioPlayerView.swift */,
+				093CE09C29E823BD008B98E0 /* AddFolderView.swift */,
+				093CE09A29E78736008B98E0 /* CreateFolderView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -175,6 +184,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				093CE09D29E823BD008B98E0 /* AddFolderView.swift in Sources */,
 				094D338F29E2FA990035A05C /* ContentView.swift in Sources */,
 				0953DF9C29E33D9A0097A006 /* FileImporter.swift in Sources */,
 				094D338D29E2FA990035A05C /* playerApp.swift in Sources */,
@@ -183,6 +193,8 @@
 				0953DF9E29E33DB70097A006 /* AudioPlayer.swift in Sources */,
 				0953DFC629E4C69A0097A006 /* DocumentPickerView.swift in Sources */,
 				0953DFA629E3449F0097A006 /* Coordinator.swift in Sources */,
+				093CE09B29E78736008B98E0 /* CreateFolderView.swift in Sources */,
+				093CE09729E780C7008B98E0 /* Folder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
